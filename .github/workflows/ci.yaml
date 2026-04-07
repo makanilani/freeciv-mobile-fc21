@@ -1,0 +1,121 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  # Code formatting check
+  clang-format:
+    name: Code Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run clang-format style check for C/C++
+        uses: jidicula/clang-format-action@v4.15.0
+        with:
+          clang-format-version: '17'
+          exclude-regex: 'dependencies'
+
+  # iOS build (macOS runner)
+  ios-build:
+    name: iOS Build
+    runs-on: macos-latest
+    needs: clang-format
+    strategy:
+      matrix:
+        configuration: [ Debug, Release ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          brew install cmake ninja
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
+            -DIOS=ON
+      - name: Build
+        run: |
+          cmake --build build --config ${{ matrix.configuration }}
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.configuration == 'Release'
+        with:
+          name: ios-build
+          path: build/
+          retention-days: 7
+
+  # Android build (Ubuntu runner)
+  android-build:
+    name: Android Build
+    runs-on: ubuntu-latest
+    needs: clang-format
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+      - name: Configure CMake for Android
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DANDROID=ON \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-26
+      - name: Build native library
+        run: |
+          cmake --build build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: build/
+          retention-days: 7
+
+  # Engine build (Linux, to verify engine compiles)
+  engine-build:
+    name: Engine Build (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            g++ \
+            cmake \
+            ninja-build \
+            python3 \
+            gettext \
+            liblua5.3-dev \
+            libsqlite3-dev \
+            libsdl2-mixer-dev
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr
+      - name: Build engine
+        run: |
+          cmake --build build

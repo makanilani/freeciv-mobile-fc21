@@ -1,0 +1,60 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "openrouter": {
+      "options": {
+      "apiKey": "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",
+      "baseUrl": "https://openrouter.ai/api/v1"
+}
+  },
+  "model": "qwen/qwen3.6-plus:free",
+  "mcp": {
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:GITHUB_PAT}"
+      }
+    }
+  },
+  "agents": {
+    "project-lead": {
+      "model": "qwen/qwen3.6-plus:free",
+      "prompt": "teamwork/.opencode/agents/project-lead.md",
+      "mode": "architect",
+      "permission": "default",
+      "color": "blue"
+    },
+    "engine-architect": {
+      "model": "qwen/qwen3-coder:free",
+      "prompt": "teamwork/.opencode/agents/engine-architect.md",
+      "mode": "architect",
+      "permission": "default",
+      "color": "green"
+    },
+    "mobile-ui": {
+      "model": "qwen/qwen3.6-plus:free",
+      "prompt": "teamwork/.opencode/agents/mobile-ui.md",
+      "mode": "architect",
+      "permission": "default",
+      "color": "cyan"
+    },
+    "backend-multiplayer": {
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "prompt": "teamwork/.opencode/agents/backend-multiplayer.md",
+      "mode": "architect",
+      "permission": "default",
+      "color": "yellow"
+    },
+    "qa-integration": {
+      "model": "stepfun/step-3.5-flash:free",
+      "prompt": "teamwork/.opencode/agents/qa-integration.md",
+      "mode": "architect",
+      "permission": "default",
+      "color": "magenta"
+    }
+  }
+}
+  }
+}

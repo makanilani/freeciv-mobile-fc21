@@ -8,34 +8,33 @@ set(CMAKE_OSX_ARCHITECTURES "arm64;arm64e")
 find_library(UIKIT UIKit)
 find_library(FOUNDATION Foundation)
 find_library(SWIFTUI SwiftUI)
+find_library(METAL Metal)
+find_library(METALKIT MetalKit)
 
-# Freeciv21 engine as static library
-add_library(freeciv21-ios STATIC
-    ${FREE_CIV21_COMMON_SOURCES}
-    ${FREE_CIV21_SERVER_SOURCES}
-)
-
-target_link_libraries(freeciv21-ios
-    ${UIKIT}
-    ${FOUNDATION}
-    ${SWIFTUI}
-    Filament::filament
-)
-
-# Create the iOS app bundle
+# Create iOS app bundle
 add_executable(FreecivMobile MACOSX_BUNDLE
-    ios/FreecivMobile/App/FreecivMobileApp.swift
-    ios/FreecivMobile/Engine/EngineBridge.swift
-    # ... other Swift source files
+    FreecivMobile/App/FreecivMobileApp.swift
+    FreecivMobile/Engine/EngineBridge.swift
 )
 
+# Link against engine libraries
 target_link_libraries(FreecivMobile
-    freeciv21-ios
+    PRIVATE
+        ${UIKIT}
+        ${FOUNDATION}
+        ${SWIFTUI}
+        ${METAL}
+        ${METALKIT}
+        freeciv21-common
+        freeciv21-server
 )
 
 # Set bundle properties
 set_target_properties(FreecivMobile PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_GUI_IDENTIFIER "com.freecivmobile.ios"
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/FreecivMobile/Info.plist
     XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+    XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
+    XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0"
 )
