@@ -84,26 +84,27 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 #   the options only apply to code we own.
 include(EnableCompilerWarnings)
 
-# Include subdirectories with the actual project definitions
-add_subdirectory(utility)
-add_subdirectory(common)
-add_subdirectory(data)
-
+ # Include subdirectories with the actual project definitions
+ add_subdirectory(utility)
+ add_subdirectory(common)
+ add_subdirectory(data)
+ 
  # Mobile clients - conditionally add based on platform
  if(IOS)
    add_subdirectory(ios)
  elseif(ANDROID)
    add_subdirectory(android)
  endif()
-if (FREECIV_BUILD_LIBSERVER)
-  add_subdirectory(server)
-endif()
-
-# Always add tools, conditionals are inside
-add_subdirectory(tools)
-
-# Add docs
-add_subdirectory(docs)
+ 
+ if (FREECIV_BUILD_LIBSERVER)
+   add_subdirectory(server)
+ endif()
+ 
+ # Always add tools, conditionals are inside
+ add_subdirectory(tools)
+ 
+ # Add docs
+ add_subdirectory(docs)
 
 # Use Auto Revision variables to convert some templates to real files at build
 # time. Avoid overwriting if the version didn't change.
