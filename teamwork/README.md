@@ -201,29 +201,46 @@ When transitioning work between agents:
 
 ## Tools & Integration
 
-### Agent Session Management
+### Agent Session Management (OpenCode CLI)
 
-```python
-# Example session initialization pattern
-def initialize_agent_session(agent_role, working_directory):
-    """
-    Initialize an agent session with appropriate context.
-    
-    Args:
-        agent_role: The role of the agent (e.g., 'engine-architect')
-        working_directory: The workspace directory for this agent
-    """
-    # Set up workspace context
-    context(workspace_root=working_directory)
-    
-    # Load relevant documentation
-    load_relevant_docs(agent_role)
-    
-    # Initialize task list
-    initialize_task_list(agent_role)
-    
-    return session_id
+```bash
+# Set your OpenRouter API key first
+export OPENROUTER_API_KEY='your-api-key-here'
+
+# Run the launch script to see all agents and their models
+./teamwork/launch-opencode.sh
+
+# Start a specific agent in interactive TUI mode
+opencode --agent project-lead
+opencode --agent engine-architect
+opencode --agent mobile-ui
+opencode --agent backend-multiplayer
+opencode --agent qa-integration
+
+# Run a specific agent headless with a prompt
+opencode run "Review the architecture in docs/ARCHITECTURE.md" --agent project-lead
+
+# Switch agents mid-session: Press Tab in the TUI
 ```
+
+```yaml
+# Agent model assignments (OpenRouter free tier, April 2026)
+agents:
+  - name: project-lead
+    model: "qwen/qwen3.6-plus:free"       # 1M context, SWE-bench 78.8
+  - name: engine-architect
+    model: "qwen/qwen3-coder:free"         # 480B params, code-specialized
+  - name: mobile-ui
+    model: "qwen/qwen3.6-plus:free"       # Vision + front-end strength
+  - name: backend-multiplayer
+    model: "nvidia/nemotron-3-super-120b-a12b:free"  # Multi-agent RL, 50% higher throughput
+  - name: qa-integration
+    model: "stepfun/step-3.5-flash:free"   # Speed-efficient MoE, 11B active params
+```
+
+### Legacy: Cline CLI (Deprecated)
+
+The old Cline-based launcher (`launch-agents.sh`) is deprecated. See the deprecation notice in that file. Migrate to OpenCode using `launch-opencode.sh`.
 
 ### Parallel Work Strategy
 
@@ -251,13 +268,32 @@ def initialize_agent_session(agent_role, working_directory):
 
 ## Getting Started
 
+### Prerequisites
+
+1. **OpenCode CLI** installed
+2. **OpenRouter API Key** - Get one at https://openrouter.ai
+3. Set your API key in the environment: `export OPENROUTER_API_KEY='your-key'`
+
 ### First Week Setup
 
-1. **Day 1**: Initialize all agent sessions and review documentation
+1. **Day 1**: Run `./teamwork/launch-opencode.sh` to initialize the framework
 2. **Day 2**: Complete codebase audit and create extraction priorities
 3. **Day 3**: Set up CI/CD and create "Hello World" prototype
 4. **Day 4**: Define first set of API contracts
 5. **Day 5**: Hold first sprint planning and assign initial tasks
+
+### Quick Start
+
+```bash
+# 1. Set your OpenRouter API key
+export OPENROUTER_API_KEY='your-key'
+
+# 2. Initialize the teamwork framework
+./teamwork/launch-opencode.sh
+
+# 3. Start an agent in a new terminal
+opencode --agent project-lead
+```
 
 ### Initial Task Board
 

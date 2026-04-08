@@ -26,8 +26,8 @@ Freeciv Mobile brings the deep 4X strategy experience to iOS and Android with to
 
 ## Project Status
 
-**Phase:** Planning & Architecture  
-**Current:** Defining scope, architecture, and technical approach.
+**Phase:** Phase 0: Fork Setup & Restructure  
+**Current:** Project restructured with Freeciv21 fork in `engine/`, mobile clients scaffolded, mobile-focused CI/CD configured.
 
 ## Documentation
 
@@ -74,32 +74,88 @@ Freeciv Mobile brings the deep 4X strategy experience to iOS and Android with to
 ## Project Structure
 
 ```
-freeciv-mobile/
-├── docs/                    # Documentation (this project)
-├── design/                  # UI/UX designs, wireframes
-├── planning/                # Task tracking, milestones
-├── notes/                   # Meeting notes, research
+freeciv-mobile-fc21/
+├── engine/                  # Freeciv21 game engine (from upstream)
+│   ├── common/              # Shared game logic
+│   ├── server/              # Game server, AI, rulesets
+│   ├── ai/                  # AI system
+│   ├── utility/             # Utilities, versioning
+│   ├── data/                # Ruleset data, tilesets
+│   ├── tools/               # Build tools
+│   └── cmake/               # CMake modules
 │
-# From Freeciv21 (to be added):
-├── common/                  # Shared game logic
-├── server/                  # Game server, AI, rulesets
-├── utility/                 # Utilities, versioning
-├── data/                    # Ruleset data, tilesets
-│
-# New mobile clients:
 ├── ios/                     # iOS application (SwiftUI)
-└── android/                 # Android application (Compose)
+│   ├── FreecivMobile/       # SwiftUI app
+│   └── CMakeLists.txt       # iOS build config
+│
+├── android/                 # Android application (Compose)
+│   ├── app/                 # Kotlin app
+│   └── CMakeLists.txt       # Android build config
+│
+├── docs/                    # Documentation
+│   ├── ARCHITECTURE.md      # Technical architecture
+│   ├── ROADMAP.md           # Implementation timeline
+│   ├── SCOPE.md             # MVP definition
+│   └── ...                  # Other documentation
+│
+├── planning/                # Task tracking
+│   ├── backlog.md           # Feature backlog
+│   └── milestones.md        # Project milestones
+│
+├── design/                  # UI/UX designs (planned)
+├── notes/                   # Research notes
+├── teamwork/                # AI agent collaboration framework
+│
+├── scripts/                 # Helper scripts
+├── .github/                 # CI/CD workflows
+└── README.md                # This file
 ```
+
+## Project Status
+
+**Phase:** Phase 0: Fork Setup & Build Infrastructure (COMPLETE ✅)  
+**Current:** Freeciv21 fork integrated, mobile build system configured, FFI bridge scaffolded, CI/CD established, determinism test framework in place. Ready for Phase 1: Mobile UI Foundation.
+
+### Phase 0 Milestones Achieved
+
+- ✅ **M0.1** Fork Freeciv21 repository (upstream configured)
+- ✅ **M0.2** Remove Qt6 client code (client/ directory removed, references cleaned)
+- ✅ **M0.3** Mobile build configuration (CMake for iOS/Android with FFI bridge)
+- ✅ **M0.4** CI/CD pipeline for mobile builds (GitHub Actions workflows)
+- ✅ **M0.5** Rendering API decision (Filament with Metal/Vulkan backends)
+- ✅ **M0.6** Determinism test framework (test suite scaffolded)
+
+### What's Working Now
+
+- Engine builds from `engine/` directory (Freeciv21 fork)
+- iOS and Android CMake build configurations
+- C FFI bridge (`mobile_ffi/`) for mobile engine access
+- Swift and Kotlin bridge layers
+- Build automation scripts (`scripts/build.sh`)
+- Comprehensive build documentation (`docs/BUILD.md`)
+- Determinism test stubs (to be fully implemented in Phase 2)
+
+### What's Next (Phase 1: Mobile UI Foundation)
+
+- Implement Filament rendering integration
+- Build map tile rendering with isometric projection
+- Implement touch input system (tap, pan, pinch)
+- Create core UI components (menus, HUD, dialogs)
+- Add camera controls (zoom, pan)
+
+See [ROADMAP.md](docs/ROADMAP.md) for full phase details.
 
 ## Timeline
 
 | Phase | Duration | Description |
 |-------|----------|-------------|
-| **Phase 0: Fork Setup** | Month 0 | Fork Freeciv21, setup mobile build |
-| **Phase 1: Mobile UI** | Months 1-4 | Native mobile UI, touch controls |
-| **Phase 2: Integration** | Months 4-6 | Connect UI to engine, game actions |
+| **Phase 0: Fork Setup** | Month 0 | ✅ COMPLETE: Fork Freeciv21, setup mobile build |
+| **Phase 1: Mobile UI** | Months 1-4 | Native mobile UI, touch controls, Filament rendering |
+| **Phase 2: Integration** | Months 4-6 | Connect UI to engine, game actions, FFI implementation |
 | **Phase 3: Multiplayer** | Months 6-9 | Backend, async sync, notifications |
 | **Phase 4: Polish** | Months 9-12 | Performance, UX polish, launch |
+
+**Total: 12 months** (3 months saved by forking vs extracting!)
 
 **Total: 12 months** (3 months saved by forking vs extracting!)
 

@@ -1,0 +1,72 @@
+# Generated files
+*_gen.h
+*_gen.cpp
+
+# Build artefacts
+*.a
+*.o
+*.pyc
+*.pyo
+
+/compile_commands.json
+
+# Translations
+*.gmo
+/translations/core/freeciv-core.pot
+/translations/nations/freeciv-nations.pot
+/translations/nations/POTFILES
+
+# Editor files
+*.rej
+*~
+*.#*
+*swp
+.DS_store
+
+# Saves
+/*.sav
+*.sav.*
+
+# Manual files from freeciv-manual
+manual*.html
+
+# Core dumps
+/core
+
+# Valgrind
+callgrind.*
+heaptrack.*
+
+# CMake files
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+Makefile
+build.ninja
+*_autogen
+/Testing
+
+# Custom user scripts
+/*.sh
+
+# Build directories
+/build*
+
+# Sensitive configuration
+teamwork/opencode.json
+.flatpak-builder
+
+# Nix build artifacts
+result
+
+# IDE files
+.cache
+.clangd
+# Folder
+.kdev4
+.vs
+# Project file
+*.kdev4
+
+# In case someone runs Doxygen
+/doc/doxygen
