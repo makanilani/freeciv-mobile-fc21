@@ -1,0 +1,6 @@
+# Server commands to use classic Freeciv21 rules
+#
+
+rulesetdir classic
+
+# changed game settings are defined in game.ruleset

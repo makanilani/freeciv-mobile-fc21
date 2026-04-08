@@ -1,0 +1,6 @@
+# Server commands to make multiplayer Freeciv21 rules
+# Use this as, eg, "./freeciv21-server -r data/multiplayer.serv"
+
+rulesetdir multiplayer
+
+# changed game settings are defined in game.ruleset

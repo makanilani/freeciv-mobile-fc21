@@ -1,0 +1,5 @@
+QMAKE_PRL_TARGET = libqsqlpsql.a
+QMAKE_PRL_CONFIG = static
+QMAKE_PRL_VERSION = 6.8.3
+QMAKE_PRL_LIBS = -L"$$[QT_INSTALL_PREFIX]/debug/lib" -lpq -lpgport -lpgcommon -lssl -lcrypto $$[QT_INSTALL_LIBS]/libQt6Sql.a $$[QT_INSTALL_LIBS]/libQt6Core.a -lz -ldouble-conversion -lb2 -lm -licui18n -licuuc -licudata -lpcre2-16 -lzstd -ldl -lrt
+QMAKE_PRL_LIBS_FOR_CMAKE = -L"$$[QT_INSTALL_PREFIX]/debug/lib";-lpq;-lpgport;-lpgcommon;-lssl;-lcrypto;$$[QT_INSTALL_LIBS]/libQt6Sql.a;$$[QT_INSTALL_LIBS]/libQt6Core.a;-lz;-ldouble-conversion;-lb2;-lm;-licui18n;-licuuc;-licudata;-lpcre2-16;-lzstd;-ldl;-lrt

@@ -1,0 +1,140 @@
+# Freeciv Mobile - AI Agent Configuration
+# Provider: OpenRouter (https://openrouter.ai)
+# 
+# Model tiers are configured for cost efficiency using free-tier models:
+# - Lead/UI tier: qwen/qwen3.6-plus:free (1M context, SWE-bench 78.8)
+# - Engine tier: qwen/qwen3-coder:free (480B params, code-specialized)
+# - Backend tier: nvidia/nemotron-3-super-120b-a12b:free (multi-agent RL, 50% higher throughput)
+# - QA tier: stepfun/step-3.5-flash:free (speed-efficient MoE, 11B active params)
+#
+# Required environment variable: OPENROUTER_API_KEY
+#
+# Updated: 2026-04-06 (migrated from deprecated models to current free tier)
+
+provider: openrouter
+base_url: https://openrouter.ai/api/v1
+
+# Model Tier Definitions
+model_tiers:
+  lead:
+    description: "Qwen 3.6 Plus - best overall free model, 1M context"
+    model: "qwen/qwen3.6-plus:free"
+    cost: "free"
+    use_case: "Architecture, coordination, UI design, complex decisions"
+    
+  engine:
+    description: "Qwen3 Coder 480B - code-specialized model"
+    model: "qwen/qwen3-coder:free"
+    cost: "free"
+    use_case: "C++ engine implementation, algorithms, performance"
+
+  backend:
+    description: "NVIDIA Nemotron 3 Super - multi-agent RL trained"
+    model: "nvidia/nemotron-3-super-120b-a12b:free"
+    cost: "free"
+    use_case: "Networking, distributed systems, sync protocols"
+    
+  qa:
+    description: "StepFun 3.5 Flash - speed-efficient MoE"
+    model: "stepfun/step-3.5-flash:free"
+    cost: "free"
+    use_case: "Testing, CI/CD, documentation, rapid iteration"
+
+# Agent Definitions
+agents:
+  - name: project-lead
+    role: Project Lead Agent (PLA)
+    expertise: Architecture, C++, Rust, Systems Design, Coordination
+    working_dir: .
+    model_tier: lead
+    model: "qwen/qwen3.6-plus:free"
+    tools:
+      - analyze
+      - delegate
+      - orchestrator
+      - github
+    responsibilities:
+      - Overall project coordination
+      - Architecture decisions
+      - Task assignment and tracking
+      - Code review oversight
+      
+  - name: engine-architect
+    role: Engine Architect Agent (EAA)
+    expertise: C++, Game Algorithms, Data Structures, Performance
+    working_dir: engine
+    model_tier: engine
+    model: "qwen/qwen3-coder:free"
+    tools:
+      - analyze
+      - delegate
+      - developer
+      - summarize
+    responsibilities:
+      - Game engine extraction and core logic
+      - Performance optimization
+      - Data structure design
+      
+  - name: mobile-ui
+    role: Mobile UI Specialist Agent (MUSA)
+    expertise: Swift, Kotlin, Reactive Programming, Touch Interfaces
+    working_dir: mobile
+    model_tier: lead
+    model: "qwen/qwen3.6-plus:free"
+    tools:
+      - analyze
+      - developer
+      - apps
+      - summarize
+    responsibilities:
+      - Native UI implementation (SwiftUI/Jetpack Compose)
+      - Touch gesture handling
+      - Mobile UX optimization
+      
+  - name: backend-multiplayer
+    role: Backend & Multiplayer Agent (BMA)
+    expertise: Rust, gRPC, WebSockets, Distributed Systems
+    working_dir: backend
+    model_tier: backend
+    model: "nvidia/nemotron-3-super-120b-a12b:free"
+    tools:
+      - analyze
+      - delegate
+      - developer
+      - summarize
+    responsibilities:
+      - Server infrastructure
+      - Networking and multiplayer sync
+      - API development
+      
+  - name: qa-integration
+    role: QA & Integration Agent (QAIA)
+    expertise: Testing, CI/CD, Documentation, Bug Tracking
+    working_dir: .
+    model_tier: qa
+    model: "stepfun/step-3.5-flash:free"
+    tools:
+      - analyze
+      - developer
+      - summarize
+      - todo
+    responsibilities:
+      - Testing and test coverage
+      - CI/CD pipeline maintenance
+      - Documentation updates
+      - Integration testing
+
+# Sprint Configuration
+sprint:
+  duration_days: 7
+  standup_time: "09:00"
+  review_time: "15:00"
+
+# Cost Management
+cost_management:
+  # All models configured are free tier
+  # Monitor usage at: https://openrouter.ai/activity
+  daily_budget_warning: "Free tier models in use - monitor rate limits"
+  fallback_models:
+    - "meta-llama/llama-3.3-70b-instruct:free"
+    - "openai/gpt-oss-120b:free"

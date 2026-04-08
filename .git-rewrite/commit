@@ -1,0 +1,9 @@
+tree d880ca8073190d8ac9a8a4ed08b89547a4ad8682
+parent e0114af2110fc4dafc87ec3b5ba1a6e967bbaedb
+author Jeff Mallatt <jjm@codewell.com> 949077521 +0000
+committer Jeff Mallatt <jjm@codewell.com> 949077521 +0000
+
+Fixed bug in Canadian nation: its plural was not marked "?plural:".
+Bug reported by Egbert Hinzen <garfy@ehinzen.de>.
+
+[[originally from CVS; cvs2svn created svn r1980]]

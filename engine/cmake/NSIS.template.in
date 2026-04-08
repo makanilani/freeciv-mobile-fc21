@@ -1,0 +1,310 @@
+;#########################################################
+; BEGIN NSIS.template.in
+; Template is picked up by CPACK from the CPackConfig.cmake
+; file and used to build our NSIS installer.
+;#########################################################
+
+;#########################################################
+; Freeciv21 Windows installer script
+; some parts adapted from classic Freeciv and Wesnoth
+; installer scripts.
+;#########################################################
+
+  Unicode true
+  SetCompressor @CPACK_NSIS_COMPRESSOR@
+
+;#########################################################
+; Defines
+;#########################################################
+
+  ;Generic Variables
+  !define APPNAME "@CPACK_PACKAGE_NAME@"
+  !define VERSION "@CPACK_PACKAGE_VERSION@"
+  !define PATCH "@CPACK_PACKAGE_VERSION_PATCH@"
+  !define CPU_ARCH "@CPACK_CPU_ARCH@"
+  !define APPID "${APPNAME}-${CPU_ARCH}"
+  !define INST_DIR "@CPACK_TEMPORARY_DIRECTORY@"
+  !define DISPLAYICON "@CPACK_NSIS_INSTALLED_ICON_NAME@"
+  !define REGPATH_UNINSTSUBKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPID}"
+  !define MUI_ICON "@CPACK_NSIS_MUI_ICON@"
+  !define MUI_UNICON "@CPACK_NSIS_MUI_UNIICON@"
+  !define MUI_UI_COMPONENTSPAGE_SMALLDESC
+
+  ;Multi-User Variables
+  !define MULTIUSER_EXECUTIONLEVEL Highest
+  !define MULTIUSER_MUI
+  !define MULTIUSER_INSTALLMODE_COMMANDLINE
+  !define MULTIUSER_INSTALLMODEPAGE_TEXT_TOP "Select the type of installation you want to perform:"
+  !define MULTIUSER_INSTALLMODE_INSTDIR "${APPNAME}"
+
+;#########################################################
+; Includes
+;#########################################################
+
+  !include "FileFunc.nsh"
+  !include "MUI2.nsh"
+  !include "MultiUser.nsh"
+  !include "LogicLib.nsh"
+  !include "Integration.nsh"
+  !include "Sections.nsh"
+  !include "Library.nsh"
+  !include "x64.nsh"
+
+;#########################################################
+; General
+;#########################################################
+
+  Name "${APPNAME} v${VERSION}"
+  OutFile "@CPACK_TOPLEVEL_DIRECTORY@/@CPACK_OUTPUT_FILE_NAME@"
+  ShowInstDetails show
+  ShowUninstDetails show
+  SetOverwrite on
+
+;#########################################################
+; Interface Settings
+;#########################################################
+
+  ; Shown an "are you sure" dialog on cancel.
+  !define MUI_ABORTWARNING
+
+;#########################################################
+; Pre-installation steps
+;#########################################################
+
+  ; We lookup to see if there is a previous installation and remove if found
+  ; This code is run right before installing
+  Section
+    ReadRegStr $0 "SHCTX" "${REGPATH_UNINSTSUBKEY}" "UninstallString"
+    ${If} $0 != ""
+      ; Get path to old install folder
+      ${GetParent} "$0" $1
+      ; Call silent uninstall in old install folder
+      ; Passing _?= forces synchronous mode, see:
+      ; https://nsis.sourceforge.io/When_I_use_ExecWait_uninstaller.exe_it_doesn%27t_wait_for_the_uninstaller%3F
+      ExecWait '"$0" /S _?=$1'
+      ; The uninstaller cannot delete itself synchronously, so give a little help
+      Delete "$0" ; Uninstaller
+      RMDir "$1"  ; Old install folder
+    ${EndIf}
+  SectionEnd
+
+;#########################################################
+; Installation types
+;#########################################################
+
+  ; There are two install types: Default and Custom. However, CPACK will duplicate
+  ; the Custom install type twice, so we leave it out here so it's only shown once
+  InstType "Default"
+
+;#########################################################
+; Component sections
+;#########################################################
+
+  ; These are defined by the @CPACK_NSIS_PAGE_COMPONENTS@ macro
+  ; However, we choose to manually define so that we can control
+  ; the order of the list of components to install.
+  ; By default, tools is put on top, which we don't want.
+
+  Section "Freeciv21" freeciv21
+    SectionIn RO 1 2
+    SetOutPath $INSTDIR
+    File /r "${INST_DIR}\freeciv21\*.*"
+  SectionEnd
+  SectionGroup "Tools" Tools
+    Section "Ruleset Editor" tool_ruledit
+      SectionIn 2
+      SetOutPath $INSTDIR
+      File /r "${INST_DIR}\tool_ruledit\*.*"
+    SectionEnd
+    Section "Modpack Installer CLI Edition" tool_fcmp_cli
+      SectionIn 2
+      SetOutPath $INSTDIR
+      File /r "${INST_DIR}\tool_fcmp_cli\*.*"
+    SectionEnd
+    Section "Ruleset Upgrade Tool" tool_ruleup
+      SectionIn 2
+      SetOutPath $INSTDIR
+      File /r "${INST_DIR}\tool_ruleup\*.*"
+    SectionEnd
+    Section "Server Manual Tool" tool_manual
+      SectionIn 2
+      SetOutPath $INSTDIR
+      File /r "${INST_DIR}\tool_manual\*.*"
+    SectionEnd
+  SectionGroupEnd
+  Section "Languages" translations
+    SectionIn 1 2
+    SetOutPath $INSTDIR
+    File /r "${INST_DIR}\translations\*.*"
+  SectionEnd
+
+;#########################################################
+; Define some macro setting for the gui
+;#########################################################
+
+  @CPACK_NSIS_INSTALLER_ICON_CODE@
+  @CPACK_NSIS_INSTALLER_MUI_WELCOMEFINISH_CODE@
+  @CPACK_NSIS_INSTALLER_MUI_UNWELCOMEFINISH_CODE@
+  @CPACK_NSIS_INSTALLER_MUI_COMPONENTS_DESC@
+  @CPACK_NSIS_INSTALLER_MUI_FINISHPAGE_RUN_CODE@
+
+;#########################################################
+; Installer GUI Pages
+;#########################################################
+
+  ; Installer Pages
+  !insertmacro MUI_PAGE_WELCOME
+  !insertmacro MUI_PAGE_COMPONENTS
+  !insertmacro MULTIUSER_PAGE_INSTALLMODE
+  !insertmacro MUI_PAGE_DIRECTORY
+  !insertmacro MUI_PAGE_INSTFILES
+  !define MUI_FINISHPAGE_RUN
+  !define MUI_FINISHPAGE_RUN_TEXT "Run Freeciv21"
+  !define MUI_FINISHPAGE_RUN_FUNCTION "RunFreeciv21"
+  !insertmacro MUI_PAGE_FINISH
+
+  ; Uninstaller Pages
+  !insertmacro MUI_UNPAGE_WELCOME
+  !insertmacro MUI_UNPAGE_CONFIRM
+  !insertmacro MUI_UNPAGE_INSTFILES
+  !insertmacro MUI_UNPAGE_FINISH
+
+;#########################################################
+; Languages
+;#########################################################
+
+  !insertmacro MUI_LANGUAGE "English"
+
+;#########################################################
+; Macros
+;#########################################################
+
+  !macro CheckAdminRights
+    UserInfo::GetAccountType
+    Pop $0
+    ${If} $0 != "admin" ; Check for admin rights on WinNT4+
+      MessageBox MB_IconInformation "Administrator rights not detected, installing in User's Home Directory by default."
+    ${EndIf}
+  !macroend
+
+;#########################################################
+; Functions
+;#########################################################
+
+  Function .onInit
+    SetShellVarContext All
+    !insertmacro MULTIUSER_INIT
+    !insertmacro CheckAdminRights
+  FunctionEnd
+
+  Function un.onInit
+    SetShellVarContext All
+    !insertmacro MULTIUSER_UNINIT
+  FunctionEnd
+
+  Function ConditionalAddToRegisty
+    Pop $0
+    Pop $1
+    StrCmp "$0" "" ConditionalAddToRegisty_EmptyString
+      WriteRegStr "SHCTX" "${REGPATH_UNINSTSUBKEY}" "$1" "$0"
+    ConditionalAddToRegisty_EmptyString:
+  FunctionEnd
+
+  Function RunFreeciv21
+    ExecShell "" "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
+  FunctionEnd
+
+;#########################################################
+; Installer Section
+;#########################################################
+
+  Section "-Core installation"
+
+    SetOutPath "$INSTDIR"
+
+    ; Store installation folder in HKLM
+    WriteRegStr "SHCTX" "SOFTWARE\${APPNAME}\${CPU_ARCH}" "" "$INSTDIR"
+
+    ; Create uninstaller.
+    WriteUninstaller "$INSTDIR\Uninstall.exe"
+
+
+    ; Create Desktop Icon
+    CreateShortCut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\freeciv21-client.exe" "" "$INSTDIR\freeciv21-client.ico" 0
+
+    ; Create Start Menu Entries
+    CreateDirectory "$SMPROGRAMS\${APPNAME}"
+    CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\freeciv21-client.exe" "" "$INSTDIR\freeciv21-client.ico" 0
+    CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME} Modpack Installer.lnk" "$INSTDIR\freeciv21-modpack-qt.exe" "" "$INSTDIR\freeciv21-modpack.ico" 0
+    CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME} Server.lnk" "$INSTDIR\freeciv21-server.exe" "" "$INSTDIR\freeciv21-server.ico" 0
+
+    ; Create entry in Windows "Add/Remove programs" panel.
+    Push "DisplayName"
+    Push "${APPNAME}"
+    Call ConditionalAddToRegisty
+    Push "DisplayVersion"
+    Push "${VERSION}"
+    Call ConditionalAddToRegisty
+    Push "Publisher"
+    Push "@CPACK_PACKAGE_VENDOR@"
+    Call ConditionalAddToRegisty
+    Push "UninstallString"
+    Push "$INSTDIR\Uninstall.exe"
+    Call ConditionalAddToRegisty
+    Push "NoRepair"
+    Push "1"
+    Call ConditionalAddToRegisty
+    Push "NoModify"
+    Push "1"
+    Call ConditionalAddToRegisty
+    Push "DisplayIcon"
+    Push "$INSTDIR\freeciv21-client.ico"
+    Call ConditionalAddToRegisty
+    Push "HelpLink"
+    Push "@CPACK_NSIS_HELP_LINK@"
+    Call ConditionalAddToRegisty
+    Push "URLInfoAbout"
+    Push "@CPACK_NSIS_URL_INFO_ABOUT@"
+    Call ConditionalAddToRegisty
+    Push "Contact"
+    Push "@CPACK_NSIS_CONTACT@"
+    Call ConditionalAddToRegisty
+
+    ; Add fc21:// protocol handler
+    WriteRegStr HKEY_CLASSES_ROOT "fc21" "URL Protocol" ""
+    WriteRegStr HKEY_CLASSES_ROOT "fc21\shell\open\command" "" "$INSTDIR\freeciv21-client.exe %1"
+
+  SectionEnd
+
+;#########################################################
+; Uninstaller Section
+;#########################################################
+
+  Section "Uninstall"
+
+    ; Remove core application files & directories.
+    @CPACK_NSIS_DELETE_FILES@
+    @CPACK_NSIS_DELETE_DIRECTORIES@
+
+    ; Remove uninstaller.
+    Delete "$INSTDIR\Uninstall.exe"
+
+    ; Remove shortcuts
+    Delete "$DESKTOP\${APPNAME}.lnk"
+    Delete "$SMPROGRAMS\${APPNAME}\*.*"
+    RMDir "$SMPROGRAMS\${APPNAME}"
+
+    ; Remove rest of installed files.
+    ; Custom files are left intact.
+    RMDir "$INSTDIR"
+
+    ; Remove entry from Windows "Add/Remove programs" panel.
+    DeleteRegKey "SHCTX" "${REGPATH_UNINSTSUBKEY}"
+    DeleteRegKey "SHCTX" "Software\${APPNAME}"
+    DeleteRegKey HKEY_CLASSES_ROOT "fc21"
+
+  SectionEnd
+
+;#########################################################
+; END NSIS.template.in
+;#########################################################

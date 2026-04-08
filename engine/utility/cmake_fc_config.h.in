@@ -1,0 +1,66 @@
+#define CMAKE_BUILD
+
+#define LOCALEDIR "${CMAKE_INSTALL_FULL_LOCALEDIR}"
+
+#cmakedefine BUG_URL "${BUG_URL}"
+#define WIKI_URL "https://longturn.readthedocs.io/en/latest/"
+
+#define DATASUBDIR "${PROJECT_VERSION_MAJOR}.0"
+
+#define AI_MOD_DEFAULT "classic"
+
+#define AI_MOD_STATIC_CLASSIC
+#cmakedefine AI_MOD_STATIC_TEX
+
+#define DEFAULT_SOCK_PORT 5556
+
+#define FREECIV_INSTALL_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+/* Release cycle information */
+#cmakedefine01 IS_DEVEL_VERSION
+
+/* enable audio */
+#cmakedefine AUDIO_SDL
+
+/* Can run programs as root */
+#cmakedefine ALWAYS_ROOT
+
+/* at_quick_exit available */
+#cmakedefine HAVE_AT_QUICK_EXIT
+
+/* bzlib.h available */
+#cmakedefine HAVE_BZLIB_H
+
+/* _stricoll() available */
+#cmakedefine HAVE__STRICOLL
+
+/* translations */
+#cmakedefine ENABLE_NLS
+
+/* Custom path to CA cert bundle */
+#cmakedefine CUSTOM_CACERT_PATH
+
+/* bzip2 compression is available in KArchive */
+#cmakedefine FREECIV_HAVE_BZ2
+
+/* lzma compression is available in KArchive */
+#cmakedefine FREECIV_HAVE_LZMA
+
+/* zstd compression is available in KArchive */
+#cmakedefine FREECIV_HAVE_ZSTD
+
+/* Max number of AI modules */
+#cmakedefine FREECIV_AI_MOD_LAST ${FREECIV_AI_MOD_LAST}
+
+/* Metaserver URL */
+#cmakedefine FREECIV_META_URL "${FREECIV_META_URL}"
+
+/* Native language support enabled */
+#cmakedefine FREECIV_ENABLE_NLS
+
+/* Windows build */
+#cmakedefine FREECIV_MSWINDOWS 1

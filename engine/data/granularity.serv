@@ -1,0 +1,4 @@
+# Server commands for Freeciv21 granularity ruleset
+
+set barbarians DISABLED
+rulesetdir granularity

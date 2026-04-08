@@ -1,0 +1,327 @@
+/*
+_   ._       Copyright (c) 1996-2021 Freeciv21 and Freeciv contributors.
+ \  |    This file is part of Freeciv21. Freeciv21 is free software: you
+  \_|        can redistribute it and/or modify it under the terms of the
+ .' '.              GNU General Public License  as published by the Free
+ :O O:             Software Foundation, either version 3 of the License,
+ '/ \'           or (at your option) any later version. You should have
+  :X:      received a copy of the GNU General Public License along with
+  :X:              Freeciv21. If not, see https://www.gnu.org/licenses/.
+ */
+
+// utility
+#include "fcintl.h"
+#include "log.h"
+#include "shared.h"
+#include "support.h"
+
+// server
+#include "connecthand.h"
+#include "notify.h"
+#include "server_connection.h"
+#include "srv_main.h"
+
+/* server/scripting */
+#include "script_fcdb.h"
+
+#include "auth.h"
+
+#define GUEST_NAME "guest"
+
+#define MIN_PASSWORD_LEN 6 // minimum length of password
+#define MAX_AUTH_TRIES 3
+#define MAX_WAIT_TIME 300 // max time we'll wait on a password
+
+/* after each wrong guess for a password, the server waits this
+ * many seconds to reply to the client */
+static const int auth_fail_wait[] = {1, 1, 2, 3};
+
+static bool is_guest_name(const char *name);
+static void get_unique_guest_name(char *name);
+static bool is_good_password(const char *password, char *msg);
+
+/**
+   Handle authentication of a user; called by handle_login_request() if
+   authentication is enabled.
+
+   If the connection is rejected right away, return FALSE, otherwise this
+   function will return TRUE.
+ */
+bool auth_user(server_connection *pconn, char *username)
+{
+  char tmpname[MAX_LEN_NAME] = "\0";
+
+  /* assign the client a unique guest name/reject if guests aren't allowed */
+  if (is_guest_name(username)) {
+    if (srvarg.auth_allow_guests) {
+      sz_strlcpy(tmpname, username);
+      get_unique_guest_name(username);
+
+      if (strncmp(tmpname, username, MAX_LEN_NAME) != 0) {
+        notify_conn_early(pconn->self, nullptr, E_CONNECTION, ftc_warning,
+                          _("Warning: the guest name '%s' has been "
+                            "taken, renaming to user '%s'."),
+                          tmpname, username);
+      }
+      sz_strlcpy(pconn->username, username);
+      establish_new_connection(pconn);
+    } else {
+      reject_new_connection(_("Guests are not allowed on this server. "
+                              "Sorry."),
+                            pconn);
+      qInfo(_("%s was rejected: Guests not allowed."), username);
+      return false;
+    }
+  } else {
+    /* we are not a guest, we need an extra check as to whether a
+     * connection can be established: the client must authenticate itself */
+    char buffer[MAX_LEN_MSG];
+    bool exists = false;
+
+    sz_strlcpy(pconn->username, username);
+
+    if (!script_fcdb_user_exists(pconn, exists)) {
+      if (srvarg.auth_allow_guests) {
+        sz_strlcpy(tmpname, pconn->username);
+        get_unique_guest_name(tmpname); // don't pass pconn->username here
+        sz_strlcpy(pconn->username, tmpname);
+
+        qCritical("Error reading database; connection -> guest");
+        notify_conn_early(
+            pconn->self, nullptr, E_CONNECTION, ftc_warning,
+            _("There was an error reading the user "
+              "database, logging in as guest connection '%s'."),
+            pconn->username);
+        establish_new_connection(pconn);
+      } else {
+        reject_new_connection(
+            _("There was an error reading the user database "
+              "and guest logins are not allowed. Sorry"),
+            pconn);
+        qInfo(_("%s was rejected: Database error and guests not "
+                "allowed."),
+              pconn->username);
+        return false;
+      }
+    } else if (exists) {
+      // we found a user
+      fc_snprintf(buffer, sizeof(buffer), _("Enter password for %s:"),
+                  pconn->username);
+      dsend_packet_authentication_req(pconn, AUTH_LOGIN_FIRST, buffer);
+      pconn->auth_settime = time(nullptr);
+      pconn->status = AS_REQUESTING_OLD_PASS;
+    } else {
+      // we couldn't find the user, he is new
+      if (srvarg.auth_allow_newusers) {
+        /* TRANS: Try not to make the translation much longer than the
+         * original. */
+        sz_strlcpy(
+            buffer,
+            _("First time login. Set a new password and confirm it."));
+        dsend_packet_authentication_req(pconn, AUTH_NEWUSER_FIRST, buffer);
+        pconn->auth_settime = time(nullptr);
+        pconn->status = AS_REQUESTING_NEW_PASS;
+      } else {
+        reject_new_connection(_("This server allows only preregistered "
+                                "users. Sorry."),
+                              pconn);
+        qInfo(_("%s was rejected: Only preregistered users allowed."),
+              pconn->username);
+
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+   Receives a password from a client and verifies it.
+ */
+bool auth_handle_reply(server_connection *pconn, char *password)
+{
+  char msg[MAX_LEN_MSG];
+
+  if (pconn->status == AS_REQUESTING_NEW_PASS) {
+    // check if the new password is acceptable
+    if (!is_good_password(password, msg)) {
+      if (pconn->auth_tries++ >= MAX_AUTH_TRIES) {
+        reject_new_connection(_("Sorry, too many wrong tries..."), pconn);
+        qInfo(_("%s was rejected: Too many wrong password "
+                "verifies for new user."),
+              pconn->username);
+
+        return false;
+      } else {
+        dsend_packet_authentication_req(pconn, AUTH_NEWUSER_RETRY, msg);
+        return true;
+      }
+    }
+
+    if (!script_fcdb_user_save(pconn, password)) {
+      notify_conn(pconn->self, nullptr, E_CONNECTION, ftc_warning,
+                  _("Warning: There was an error in saving to the database. "
+                    "Continuing, but your stats will not be saved."));
+      qCritical("Error writing to database for: %s", pconn->username);
+    }
+
+    establish_new_connection(pconn);
+  } else if (pconn->status == AS_REQUESTING_OLD_PASS) {
+    bool success = false;
+
+    if (script_fcdb_user_verify(pconn, password, success) && success) {
+      establish_new_connection(pconn);
+    } else {
+      pconn->status = AS_FAILED;
+      pconn->auth_tries++;
+      pconn->auth_settime =
+          time(nullptr) + auth_fail_wait[pconn->auth_tries];
+    }
+  } else {
+    qDebug("%s is sending unrequested auth packets", pconn->username);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+   Checks on where in the authentication process we are.
+ */
+void auth_process_status(server_connection *pconn)
+{
+  switch (pconn->status) {
+  case AS_NOT_ESTABLISHED:
+    // nothing, we're not ready to do anything here yet.
+    break;
+  case AS_FAILED:
+    /* the connection gave the wrong password, we kick 'em off or
+     * we're throttling the connection to avoid password guessing */
+    if (pconn->auth_settime > 0 && time(nullptr) >= pconn->auth_settime) {
+      if (pconn->auth_tries >= MAX_AUTH_TRIES) {
+        pconn->status = AS_NOT_ESTABLISHED;
+        reject_new_connection(_("Sorry, too many wrong tries..."), pconn);
+        qInfo(_("%s was rejected: Too many wrong password tries."),
+              pconn->username);
+        connection_close_server(pconn, _("auth failed"));
+      } else {
+        struct packet_authentication_req request;
+
+        pconn->status = AS_REQUESTING_OLD_PASS;
+        request.type = AUTH_LOGIN_RETRY;
+        sz_strlcpy(request.message,
+                   _("Your password is incorrect. Try again."));
+        send_packet_authentication_req(pconn, &request);
+      }
+    }
+    break;
+  case AS_REQUESTING_OLD_PASS:
+  case AS_REQUESTING_NEW_PASS:
+    // waiting on the client to send us a password... don't wait too long
+    if (time(nullptr) >= pconn->auth_settime + MAX_WAIT_TIME) {
+      pconn->status = AS_NOT_ESTABLISHED;
+      reject_new_connection(_("Sorry, your connection timed out..."), pconn);
+      qInfo(_("%s was rejected: Connection timeout waiting for "
+              "password."),
+            pconn->username);
+      connection_close_server(pconn, _("auth failed"));
+    }
+    break;
+  case AS_ESTABLISHED:
+    // this better fail bigtime
+    fc_assert(pconn->status != AS_ESTABLISHED);
+    break;
+  }
+}
+
+/**
+   See if the name qualifies as a guest login name
+ */
+static bool is_guest_name(const char *name)
+{
+  return (fc_strncasecmp(name, GUEST_NAME, qstrlen(GUEST_NAME)) == 0);
+}
+
+/**
+   Return a unique guest name
+   WARNING: do not pass pconn->username to this function: it won't return!
+ */
+static void get_unique_guest_name(char *name)
+{
+  unsigned int i;
+
+  // first see if the given name is suitable
+  if (is_guest_name(name) && !conn_by_user(name)) {
+    return;
+  }
+
+  // next try bare guest name
+  fc_strlcpy(name, GUEST_NAME, MAX_LEN_NAME);
+  if (!conn_by_user(name)) {
+    return;
+  }
+
+  // bare name is taken, append numbers
+  for (i = 1;; i++) {
+    fc_snprintf(name, MAX_LEN_NAME, "%s%u", GUEST_NAME, i);
+
+    // attempt to find this name; if we can't we're good to go
+    if (!conn_by_user(name)) {
+      break;
+    }
+
+    // Prevent endless loops.
+    fc_assert_ret(i < 2 * MAX_NUM_PLAYERS);
+  }
+}
+
+/**
+   Verifies that a password is valid. Does some [very] rudimentary safety
+   checks. TODO: do we want to frown on non-printing characters?
+   Fill the msg (length MAX_LEN_MSG) with any worthwhile information that
+   the client ought to know.
+ */
+static bool is_good_password(const char *password, char *msg)
+{
+  // check password length
+  if (strlen(password) < MIN_PASSWORD_LEN) {
+    fc_snprintf(msg, MAX_LEN_MSG,
+                _("Your password is too short, the minimum length is %d. "
+                  "Try again."),
+                MIN_PASSWORD_LEN);
+    return false;
+  }
+
+  if (!is_ascii_name(password)) {
+    fc_snprintf(msg, MAX_LEN_MSG,
+                _("Your password contains illegal characters. Try again."));
+    return false;
+  }
+
+  // Make sure the message doesn't contain garbage.
+  msg[0] = '\0';
+
+  return true;
+}
+
+/**
+   Get username for connection
+ */
+const char *auth_get_username(server_connection *pconn)
+{
+  fc_assert_ret_val(pconn != nullptr, nullptr);
+  fc_assert_ret_val(conn_is_valid(pconn), nullptr);
+
+  return pconn->username;
+}
+
+/**
+   Get connection ip address
+ */
+const char *auth_get_ipaddr(server_connection *pconn)
+{
+  fc_assert_ret_val(pconn != nullptr, nullptr);
+  fc_assert_ret_val(conn_is_valid(pconn), nullptr);
+
+  return pconn->ipaddr;
+}
